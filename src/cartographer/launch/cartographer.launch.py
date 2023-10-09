@@ -27,7 +27,7 @@ from launch.substitutions import ThisLaunchFileDir
 
 
 def generate_launch_description():
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    use_sim_time = LaunchConfiguration('use_sim_time', default='True')
     cartographer_prefix = get_package_share_directory(
         'cartographer')
     cartographer_config_dir = LaunchConfiguration(
@@ -39,6 +39,16 @@ def generate_launch_description():
     resolution = LaunchConfiguration('resolution', default='0.05')
     publish_period_sec = LaunchConfiguration('publish_period_sec', default='1.0')
     rviz_config_dir = os.path.join(cartographer_prefix, 'config', 'cartographer.rviz')
+
+    #remappings=[('/tf', 'tf'),
+    #            ('/tf_static', 'tf_static'),
+    #            ('scan', 'diff_drive/scan'),
+    #            ('imu', 'diff_drive/imu'),
+    #            ('odom', 'diff_drive/odom')]
+
+    remappings=[('scan', 'diff_drive/scan'),
+                ('imu', 'diff_drive/imu'),
+                ('odom', 'diff_drive/odometry')]
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -53,12 +63,14 @@ def generate_launch_description():
             'use_sim_time',
             default_value='false',
             description='Use simulation (Gazebo) clock if true'),
+
         Node(
             package='cartographer_ros',
             executable='cartographer_node',
             name='cartographer_node',
             output='screen',
             parameters=[{'use_sim_time': use_sim_time}],
+            remappings=remappings,
             arguments=['-configuration_directory', cartographer_config_dir,
                        '-configuration_basename', configuration_basename]),
 
