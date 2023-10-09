@@ -20,34 +20,38 @@ from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
 from launch.substitutions import LaunchConfiguration
 from launch.actions import IncludeLaunchDescription
-from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import ThisLaunchFileDir
 
 
 def generate_launch_description():
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    use_sim_time = LaunchConfiguration('use_sim_time', default='True')
+    navigation_prefix = get_package_share_directory('navigation')
+    # With map server
+    navigation_launch_dir = LaunchConfiguration(
+            'navigation_launch_dir',
+            default=os.path.join(navigation_prefix, 'launch', 'navigation_launch.py'))
+    navigation_params_dir = LaunchConfiguration(
+            'navigation_params_dir',
+            default=os.path.join(navigation_prefix, 'param', 'nav2_params.yaml'))
     cartographer_prefix = get_package_share_directory(
-        'cartographer')
+            'cartographer')
+    cartographer_launch_dir = LaunchConfiguration(
+            'cartographer_launch_dir',
+            default=os.path.join(cartographer_prefix, 'launch', 'cartographer.launch.py'))
     cartographer_config_dir = LaunchConfiguration(
-        'cartographer_config_dir',
-        default=os.path.join(cartographer_prefix, 'config'))
+            'cartographer_config_dir',
+            default=os.path.join(cartographer_prefix, 'config'))
     configuration_basename = LaunchConfiguration(
-        'configuration_basename', default='diff_drive.lua')
-    load_state_filename = LaunchConfiguration(
-        'load_state_filename', default='')
+            'configuration_basename', default='diff_drive_localization.lua')
     occupancy_grid_node_condition = LaunchConfiguration(
-        'occupancy_grid_node_condition', default='true')
+            'occupancy_grid_node_condition', default=True)
     rviz2_condition = LaunchConfiguration(
-        'rviz2_condition', default='true')
-
-    resolution = LaunchConfiguration('resolution', default='0.05')
-    publish_period_sec = LaunchConfiguration('publish_period_sec', default='1.0')
-    rviz_config_dir = os.path.join(cartographer_prefix, 'config', 'cartographer.rviz')
-
-    remappings=[('scan', 'diff_drive/scan'),
-                ('imu', 'diff_drive/imu'),
-                ('odom', 'diff_drive/odometry')]
+            'rviz2_condition', default=True)
+    load_state_filename = LaunchConfiguration(
+            'load_state_filename',
+            default=os.path.join(cartographer_prefix, 'map', 'diff_drive.pbstream'))
+    rviz_config_dir = os.path.join(navigation_prefix, 'config', 'navigation.rviz')
 
     declare_cartographer_config_dir = DeclareLaunchArgument(
             'cartographer_config_dir',
@@ -63,61 +67,35 @@ def generate_launch_description():
 
     declare_use_sim_time = DeclareLaunchArgument(
             'use_sim_time',
-            default_value='true',
+            default_value='false',
             description='Use simulation (Gazebo) clock if true'
     )
      
-    declare_resolution = DeclareLaunchArgument(
-            'resolution',
-            default_value=resolution,
-            description='Resolution of a grid cell in the published occupancy grid'
-    )
-
-    declare_publish_period_sec = DeclareLaunchArgument(
-            'publish_period_sec',
-            default_value=publish_period_sec,
-            description='OccupancyGrid publishing period'
-    )
-
     declare_occupancy_grid_node_condition = DeclareLaunchArgument(
             'occupancy_grid_node_condition', 
             default_value=occupancy_grid_node_condition,
             description='Run occupancygrid_node'
     )
 
-    declare_rviz2_condition = DeclareLaunchArgument(
-            'rviz2_condition', 
-            default_value=rviz2_condition,
-            description='Run rviz2'
+    cartographer_localiation_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(cartographer_launch_dir),
+            launch_arguments={'load_state_filename': load_state_filename,
+                              'configuration_basename': configuration_basename,
+                              'occupancy_grid_node_condition': occupancy_grid_node_condition,
+                              'rviz2_condition': rviz2_condition}.items()
     )
 
-    cartographer_node =  Node(
-            package='cartographer_ros',
-            executable='cartographer_node',
-            name='cartographer_node',
-            output='screen',
-            parameters = [{'use_sim_time': use_sim_time}],
-            remappings=remappings,
-            arguments=['-configuration_directory', cartographer_config_dir,
-                       '-configuration_basename', configuration_basename,
-                       '-load_state_filename', load_state_filename]
+    navigation_launch = IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(navigation_launch_dir),
+            launch_arguments={'use_sim_time': use_sim_time,
+                              'params_file': navigation_params_dir}.items()
     )
-
-    cartographer_occupancy_grid_node = Node(
-            package = 'cartographer_ros',
-            executable = 'cartographer_occupancy_grid_node',
-            parameters = [{'use_sim_time': use_sim_time},
-                          {'resolution': 0.05}],
-            condition=IfCondition(LaunchConfiguration('occupancy_grid_node_condition'))
-    )
-
     rviz2 = Node(
             package='rviz2',
             executable='rviz2',
             name='rviz2',
             arguments=['-d', rviz_config_dir],
             parameters=[{'use_sim_time': use_sim_time}],
-            condition=IfCondition(LaunchConfiguration('rviz2_condition')),
             output='screen'
     )
 
@@ -125,11 +103,8 @@ def generate_launch_description():
         declare_use_sim_time,
         declare_cartographer_config_dir,
         declare_configuration_basename,
-        declare_resolution,
-        declare_publish_period_sec,
         declare_occupancy_grid_node_condition,
-        declare_rviz2_condition,
-        cartographer_node,
-        cartographer_occupancy_grid_node,
-        rviz2
+        cartographer_localiation_launch,
+        #navigation_launch,
+        #rviz2
      ])
