@@ -1,11 +1,13 @@
+import os
 from setuptools import setup
 
 package_name = 'practice_icp_slam'
+submodule_name = 'utils'
 
 setup(
     name=package_name,
     version='0.0.0',
-    packages=[package_name],
+    packages=[package_name, os.path.join(package_name, submodule_name)],
     data_files=[
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
