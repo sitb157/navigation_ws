@@ -1,0 +1,3 @@
+[submodule "src/icp_slam"]
+	path = src/icp_slam
+	url = git@github.com:sitb157/icp_slam.git
