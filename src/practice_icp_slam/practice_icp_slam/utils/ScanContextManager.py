@@ -126,7 +126,7 @@ class ScanContextManager:
         return self.ptclouds[node_idx]
 
     def detectLoop(self):
-        exclude_recent_nodes = 70
+        exclude_recent_nodes = 30
         valid_recent_node_idx = self.curr_node_idx - exclude_recent_nodes
         if (valid_recent_node_idx < 1):
             return None, None, None
